@@ -5,7 +5,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -222,6 +221,85 @@ public class ProjectDao extends DaoBase {
 				return categories;
 			}
 		}
+	}
+
+	public boolean modifyProjectDetails(Project project) {
+		/* The difference in this method and the insert method
+		 * is that you will examine the return value from executeUpdate(). 
+		 * The executeUpdate() method returns the number of rows affected by the UPDATE operation. 
+		 * Since a single row is being acted on 
+		 * (comparing to the primary key in the WHERE clause guarantees this),
+		 * the return value should be 1. 
+		 * If it is 0 it means that no rows were acted on 
+		 * and the primary key value (project ID) is not found. 
+		 * So, the method returns true if executeUpdate() returns 1 and false if it returns 0.
+		 */
+		// @ formatter:off
+		String sql = ""
+				+ "UPDATE " + PROJECT_TABLE + " SET "
+				+ "project_name = ?, "
+				+ "estimated_hours = ?, "
+				+ "actual_hours = ?, "
+				+ "difficulty = ?, "
+				+ "notes = ? "
+				+ "WHERE project_id = ?";
+		// @formatter:on
+		
+		try(Connection conn = DbConnection.getConnection()) {
+			startTransaction(conn);
+			
+			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+				setParameter(stmt, 1, project.getProjectName(), String.class);
+				setParameter(stmt, 2, project.getEstimatedHours(), BigDecimal.class);
+				setParameter(stmt, 3, project.getActualHours(), BigDecimal.class);
+				setParameter(stmt, 4, project.getDifficulty(), Integer.class);
+				setParameter(stmt, 5, project.getNotes(), String.class);
+				setParameter(stmt, 6, project.getProjectId(), Integer.class);
+				
+				
+				//executeUpdate is different in that it RETURNS a value of how many rows were affected
+				//we expect that the updated row will be one here
+				boolean modified = stmt.executeUpdate() == 1;
+				commitTransaction(conn);
+				
+				return modified;
+				
+			} catch(Exception e) {
+				rollbackTransaction(conn);
+				throw new DbException(e);
+			}
+		} catch(SQLException e) {
+			throw new DbException(e);
+		}
+	}
+
+	public boolean deleteProject(Integer projectId) {
+		// @formatter:off
+		String sql = ""
+				+ "DELETE FROM " + PROJECT_TABLE 
+				+ " WHERE project_id = ?";
+		// @formatter:on
+		
+		try(Connection conn = DbConnection.getConnection()) {
+			startTransaction(conn);
+			
+			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
+				setParameter(stmt, 1, projectId, Integer.class);
+
+				boolean deleted = stmt.executeUpdate() == 1;
+				commitTransaction(conn);
+				
+				return deleted;
+				
+			} catch(Exception e) {
+				rollbackTransaction(conn);
+				throw new DbException(e);
+			}
+		} catch(SQLException e) {
+			throw new DbException(e);
+		}
+		
+				
 	}
 
 }
